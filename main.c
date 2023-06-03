@@ -271,7 +271,6 @@ void delay10us_wrapper(unsigned int microseconds)
     delay10us(microseconds);
 }
 
-
 inline bool isTamperOpen(void)
 {
     return TAMPER_SWITCH;
@@ -668,7 +667,5 @@ void main(void)
             // track this for debugging purposes
             flag.packetCount++;
         }
-        
-
     } 
 }
