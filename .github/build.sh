@@ -17,3 +17,5 @@ echo "Building firmware..."
 ls -l
 wait
 sudo make
+wait
+echo "done with make process..."
