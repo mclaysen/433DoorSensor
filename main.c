@@ -17,9 +17,8 @@
     #error "The selected MCU doesn't have a power-down wake-up timer."
 #endif // MCU_HAS_WAKE_UP_TIMER
 
-// uncomment only one protocol timing
-//#define PROTOCOL_STOCK
-#define PROTOCOL_ONE
+#define PROTOCOL_STOCK
+
 
 //---------------------------------------------------------------------------------------------
 // we need to obey rules for alarm transmission: https://www.law.cornell.edu/cfr/text/47/15.231
@@ -30,29 +29,6 @@
 //   number of events is about 2000000/(20*(470+14060+24*(470+1360))) ~ 2 events
 //   (3600 seconds / 2 events) / (16 sec wakeup timer) ~ 113 wake ups
 //---------------------------------------------------------------------------------------------
-
-
-// check for tamper switch pressed at startup, if so enter bootloader mode
-// this is helpful during firmware development or reflashing
-// however, if inserting the battery, make sure not to hold down the tamper switch
-// FIXME: concerned that brownout reset could falsely trigger this while in housing
-#if 1
-    #define CHECK_FOR_TAMPER_AT_STARTUP true
-#else
-    #define CHECK_FOR_TAMPER_AT_STARTUP false
-#endif
-
-
-// keep sending switch state until alarm condition clears
-//
-// otherwise some users may only want to know about switch changes
-//  for example using the circuit board as on/off switches for lighting
-// disabling tamper also saves on battery power
-#if 1
-    #define TAMPERS_ENABLED true
-#else
-    #define TAMPERS_ENABLED false
-#endif
 
 
 // use upper bits of code as packet count to help in detecting missing packets
@@ -87,17 +63,7 @@
 #define RADIO_ASK      P3_4
 #define BATTERY_DETECT P3_5
 
-
-// radio protocol apparently requires repeated transmissions so it is accepted at receiver
-// RF-Bridge-EFM8BB1 alternative firmware for receiver chip on sonoff bridge seems to require only repeating twice
-// stock EFM8BB1 receiver on sonoff bridge r1 seems to require four retransmissions
-// @mmotley999 reported up to eight retransmissions are required
-// @bismosa reports stock firmware repeats transmission twenty times!
-// sonoff bridge r2 seems to to similarly require many repeats
-//#define REPEAT_TRANSMISSIONS 1
-//#define REPEAT_TRANSMISSIONS 4
-//#define REPEAT_TRANSMISSIONS 8
-#define REPEAT_TRANSMISSIONS 20
+#define REPEAT_TRANSMISSIONS 2
 
 
 // sec. 9, table datasheet output blanking VDD transition from low to high (500 microseconds)
@@ -135,13 +101,11 @@
 // we use bitwise-and in check logic instead of modulo divide to save code space
 // about one minute
 //#define TAMPER_SLOT 4
-//#define REED_SLOT   4
+#define REED_SLOT   4
 // about ten minutes
 #define TAMPER_SLOT 38
-#define REED_SLOT   38
+//#define REED_SLOT   38
 // about thirty minutes
-//#define TAMPER_SLOT  113
-//#define REED_SLOT    113
 #define BATTERY_SLOT 113
 // about one hour
 //#define BATTERY_SLOT 225
@@ -185,8 +149,6 @@ static const unsigned char gReedClose   = 0x0e;
 // avoid performing mathematical multiplies on processor by computing these as constants
 #if defined(PROTOCOL_STOCK)
     // stock sensor timings (see door_sensor_reverse_notes_fv1.txt)
-    // (tested working on Sonoff Bridge R2 V1.0)
-    // (does not work on stock Sonoff Bridge R2 V2.2)
     const uint16_t gPulseHigh =   47;
     const uint16_t gPulseLow  = 1406;
     const uint16_t gZeroHigh  =   47;
@@ -195,16 +157,6 @@ static const unsigned char gReedClose   = 0x0e;
     const uint16_t gOneLow    =   47;
     
     // it saves code space to just specify polarity for conditional compilation
-    #define PROTOCOL_INVERTED false
-
-#elif defined(PROTOCOL_ONE)
-    const uint16_t gPulseHigh =   35;
-    const uint16_t gPulseLow  = 1085;
-    const uint16_t gZeroHigh  =   35;
-    const uint16_t gZeroLow   =  105;
-    const uint16_t gOneHigh   =  105;
-    const uint16_t gOneLow    =   35;
-    
     #define PROTOCOL_INVERTED false
 
 #endif // specify protocol
@@ -319,9 +271,7 @@ void delay10us_wrapper(unsigned int microseconds)
     delay10us(microseconds);
 }
 
-/*! \brief 
- *
- */        
+
 inline bool isTamperOpen(void)
 {
     return TAMPER_SWITCH;
@@ -490,21 +440,13 @@ void main(void)
     led_off();
 
 
-#if CHECK_FOR_TAMPER_AT_STARTUP
 
-    // if we are holding down tamper switch at power up, enter iap mode
-    // this is intended to make entering flash mode easier on subsequent flashes
-    // if the board has no tamper switch, then this will just never do anything
-    // if a regular user is inserting a battery, it is unlikely that they are also pressing tamper switch
-    //  so this should just be skipped over in that case
     if (!isTamperOpen())
     {
         // set ISP boot bit and reset processor
         IAP_CONTR = 0x60;
     }
-    
-#endif
-    
+       
     
     // enable everything in one call to save bytes
     enable_interrupts();
@@ -515,11 +457,9 @@ void main(void)
         flag.batteryLowInterrupted = true;
     }
 
-    // main loop
     while (true)
     {       
 
-#if TAMPERS_ENABLED
         // only enable wake up timer if alarm wake up required, otherwise clear/disable
         // note: sec. 3.3.1 special function registers address map shows that default state of WKTCx has default value in timer        
         if (flag.tamperTripped | flag.reedTripped | flag.batteryLowTripped)
@@ -535,7 +475,7 @@ void main(void)
             // could just clear most significant enable bit, but guess no harm in clearing count also
             WKTC = 0x0000;
         }
-#endif
+
         
         // check if there are unserviced interrupt(s) prior to sleeping
         if (!(flag.reedInterrupted | flag.tamperInterrupted | flag.batteryLowInterrupted))
@@ -551,7 +491,6 @@ void main(void)
             }
         }
         
-#if TAMPERS_ENABLED
         // tamper trip sends messages while alarm is occuring (i.e., tamper opens once and remains open)
         // sending stops once the tamper is again closed
         if (flag.tamperTripped)
@@ -589,7 +528,6 @@ void main(void)
                 }
             }
         }
-#endif
 
         
 #if BATTERY_TRIP_ENABLED
@@ -732,5 +670,5 @@ void main(void)
         }
         
 
-    } // main while loop
+    } 
 }
