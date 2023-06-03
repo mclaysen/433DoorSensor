@@ -14,4 +14,6 @@ cd uni-STC/demos/
 git clone https://github.com/mclaysen/433DoorSensor.git
 cd 433DoorSensor/
 echo "Building firmware..."
+mkdir Build
+ls -l
 make
