@@ -11,7 +11,7 @@ git clone https://github.com/area-8051/uni-STC.git
 cd uni-STC/demos/
 
 # this repository
-git clone https://github.com/mightymos/ReedTripRadio.git
-cd ReedTripRadio/
+git clone https://github.com/mclaysen/433DoorSensor.git
+cd 433DoorSensor/
 echo "Building firmware..."
 make
