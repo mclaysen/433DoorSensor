@@ -89,7 +89,7 @@ SRCS := \
 CONSOLE_BAUDRATE := 19200
 CONSOLE_PORT := ttyUSB0
 
-ISP_PORT := COM3
+ISP_PORT := /dev/ttyUSB0
 
 # Boilerplate rules ----------------------------------------------------
 include $(MAKE_DIR)/1-mcu-settings.mk
