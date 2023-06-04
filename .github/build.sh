@@ -16,6 +16,6 @@ cd 433DoorSensor/
 echo "Building firmware..."
 ls -l
 wait
-sudo make
+make
 wait
-echo "done with make process..."
+echo "done building firmware..."
